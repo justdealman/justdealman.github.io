@@ -7,23 +7,24 @@
 <button onclick="showNotification()">Click me</button>
 <script>
     function showNotification() {
-        new window.Notification("Новое сообщение", {
+        new window.Notification('Новое сообщение', {
             icon: 'https://storage.florist.ru/f/get/content/bouquet-list/ae/0d/_db627b3b8f4fcf2b5c67a534a30d/270x270/647d8ecb29688.jpg',
             body: 'Пришло новое сообщение по заказу №38947234874',
             image: 'https://peter-gribanov.github.io/serviceworker/Bubble-Nebula_big.jpg',
         });
     }
-    if (!("Notification" in window)) {
-        alert("This browser does not support desktop notification");
-    } else if (window.Notification.permission === "granted") {
-        showNotification();
-    } else if (window.Notification.permission !== "denied") {
-        window.Notification.requestPermission().then((permission) => {
-            if (permission === "granted") {
-                showNotification();
-            }
-        });
-    }
+    navigator.serviceWorker.register('./sw.js');
+    Notification.requestPermission((result) => {
+        if (result === 'granted') {
+            navigator.serviceWorker.ready.then((registration) => {
+                registration.showNotification('Новое сообщение', {
+                    icon: 'https://storage.florist.ru/f/get/content/bouquet-list/ae/0d/_db627b3b8f4fcf2b5c67a534a30d/270x270/647d8ecb29688.jpg',
+                    body: 'Пришло новое сообщение по заказу №38947234874',
+                    image: 'https://peter-gribanov.github.io/serviceworker/Bubble-Nebula_big.jpg',
+                });
+            });
+        }
+    });
 </script>
 </body>
 </html>
