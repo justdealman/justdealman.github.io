@@ -19,9 +19,10 @@
             navigator.serviceWorker.ready.then((registration) => {
                 setTimeout(() => {
                     registration.showNotification('Новое сообщение', {
-                        icon: 'https://storage.florist.ru/f/get/content/bouquet-list/ae/0d/_db627b3b8f4fcf2b5c67a534a30d/270x270/647d8ecb29688.jpg',
                         body: 'Пришло новое сообщение по заказу №38947234874',
-                        image: 'https://peter-gribanov.github.io/serviceworker/Bubble-Nebula_big.jpg',
+                        icon: 'https://partner.florist.ru/apple-touch-icon.png',
+                        image: 'https://storage.florist.ru/f/get/content/bouquet-list/ae/0d/_db627b3b8f4fcf2b5c67a534a30d/270x270/647d8ecb29688.jpg',
+                        click_action: 'https://justdealman.github.io/',
                     });
                 }, 5000);
             });
