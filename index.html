@@ -3,60 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>AR GSplat GitHub</title>
+    <title>AR 3D Gaussian Splatting</title>
     <style>
-        body { margin: 0; background-color: #111; overflow: hidden; font-family: sans-serif; }
+        body { margin: 0; background-color: #000; overflow: hidden; font-family: sans-serif; }
         canvas { display: block; width: 100vw; height: 100vh; }
-        #loader {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            color: white; font-size: 1.2rem; text-align: center; z-index: 10;
+        #ui {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            color: white; text-align: center; z-index: 10; pointer-events: none;
         }
         #ar-btn {
             position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-            padding: 15px 30px; background: #fff; border-radius: 30px;
-            border: none; font-weight: bold; display: none; cursor: pointer;
+            padding: 15px 30px; background: #ffffff; border-radius: 30px;
+            border: none; font-weight: bold; cursor: pointer; pointer-events: auto;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5); display: none;
         }
     </style>
 </head>
 <body>
-    <div id="loader">Загрузка библиотеки...</div>
-    <button id="ar-btn">ЗАПУСТИТЬ AR</button>
+
+    <div id="ui">
+        <div id="loader">Инициализация...</div>
+    </div>
+    
+    <button id="ar-btn">СМОТРЕТЬ В AR</button>
 
     <script type="module">
-        // Используем конкретную версию для стабильности
+        // Импортируем локальный файл библиотеки
         import * as SPLAT from './gsplat.js';
 
         async function init() {
-            const canvas = document.createElement("canvas");
-            const renderer = new SPLAT.WebGLRenderer(canvas);
-            const scene = new SPLAT.Scene();
-            const camera = new SPLAT.Camera();
-            const controls = new SPLAT.OrbitControls(camera, canvas);
-    
-            document.body.appendChild(canvas);
-    
+            const loaderEl = document.getElementById('loader');
+            const arBtn = document.getElementById('ar-btn');
+            
             try {
-                // В новых версиях используется SPLAT.SplatLoader()
-                const loader = new SPLAT.SplatLoader(); 
+                // 1. Настройка рендерера и сцены
+                const canvas = document.createElement("canvas");
+                document.body.appendChild(canvas);
+
+                const renderer = new SPLAT.WebGLRenderer(canvas);
+                const scene = new SPLAT.Scene();
+                const camera = new SPLAT.Camera();
+                const controls = new SPLAT.OrbitControls(camera, canvas);
+
+                // 2. Загрузка модели (пробуем самый актуальный метод)
+                // Если GitHub не отдает .spz, замените на "model.txt"
+                const modelPath = "./model.spz"; 
+
+                console.log("Начинаю загрузку модели...");
                 
-                // Если файл переименован в .txt для GitHub, укажите "model.txt"
-                await loader.loadAsync("./model.spz", scene, (progress) => {
-                    console.log("Загрузка:", Math.round(progress * 100) + "%");
+                // В версии 1.1.9+ Loader.loadAsync - статический метод
+                await SPLAT.Loader.loadAsync(modelPath, scene, (progress) => {
+                    loaderEl.innerText = `Загрузка: ${Math.round(progress * 100)}%`;
                 });
-    
-                console.log("Модель успешно загружена!");
-            } catch (error) {
-                console.error("Ошибка загрузки:", error);
-            }
-    
-            const frame = () => {
-                controls.update();
-                renderer.render(scene, camera);
+
+                loaderEl.innerText = "Модель загружена!";
+                setTimeout(() => loaderEl.style.display = "none", 2000);
+                arBtn.style.display = "block";
+
+                // 3. Логика AR (WebXR)
+                arBtn.onclick = async () => {
+                    if (navigator.xr) {
+                        try {
+                            const session = await navigator.xr.requestSession("immersive-ar", {
+                                requiredFeatures: ["local-floor", "hit-test"]
+                            });
+                            renderer.xr.setSession(session);
+                            arBtn.style.display = "none";
+                        } catch (e) {
+                            alert("Ошибка входа в AR: " + e.message);
+                        }
+                    } else {
+                        alert("Ваш браузер не поддерживает WebXR (нужен Chrome на Android + HTTPS)");
+                    }
+                };
+
+                // 4. Цикл отрисовки
+                const frame = () => {
+                    controls.update();
+                    renderer.render(scene, camera);
+                    requestAnimationFrame(frame);
+                };
+                
+                window.addEventListener("resize", () => {
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+
                 requestAnimationFrame(frame);
-            };
-            requestAnimationFrame(frame);
+
+            } catch (err) {
+                console.error("Критическая ошибка:", err);
+                loaderEl.innerHTML = `<span style="color:red">Ошибка: ${err.message}</span>`;
+            }
         }
-    
+
+        // Запуск при загрузке страницы
         init();
     </script>
 </body>
