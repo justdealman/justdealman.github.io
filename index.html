@@ -1,52 +1,44 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Splat Viewer</title>
+    <title>Splat Test</title>
     <style>
-        body { margin: 0; background-color: #000; overflow: hidden; }
-        canvas { display: block; width: 100vw; height: 100vh; }
-        #status { position: fixed; top: 10px; left: 10px; color: white; font-family: sans-serif; z-index: 10; }
+        body { margin: 0; background: #222; color: white; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; }
+        #msg { text-align: center; }
     </style>
 </head>
 <body>
-    <div id="status">Загрузка модели...</div>
+    <div id="msg">Инициализация...</div>
     <script type="module">
         import * as SPLAT from 'https://cdn.jsdelivr.net';
 
-        const canvas = document.createElement("canvas");
-        document.body.appendChild(canvas);
-
-        const renderer = new SPLAT.WebGLRenderer(canvas);
-        const scene = new SPLAT.Scene();
-        const camera = new SPLAT.Camera();
-        const controls = new SPLAT.OrbitControls(camera, canvas);
-
-        async function init() {
+        async function start() {
+            const msg = document.getElementById('msg');
             try {
-                // Прямая загрузка файла
-                await SPLAT.Loader.loadAsync("model.spz", scene);
-                document.getElementById('status').innerText = "Модель загружена. Используйте мышь/тач для обзора.";
-            } catch (error) {
-                document.getElementById('status').innerText = "Ошибка: " + error.message;
-                console.error(error);
-            }
+                const canvas = document.createElement("canvas");
+                const renderer = new SPLAT.WebGLRenderer(canvas);
+                const scene = new SPLAT.Scene();
+                const camera = new SPLAT.Camera();
+                const controls = new SPLAT.OrbitControls(camera, canvas);
+                
+                document.body.innerHTML = ""; // Очищаем экран
+                document.body.appendChild(canvas);
 
-            const frame = () => {
-                controls.update();
-                renderer.render(scene, camera);
+                await SPLAT.Loader.loadAsync("model.spz", scene, (p) => {
+                    msg.innerText = `Загрузка: ${Math.round(p * 100)}%`;
+                });
+
+                const frame = () => {
+                    controls.update();
+                    renderer.render(scene, camera);
+                    requestAnimationFrame(frame);
+                };
                 requestAnimationFrame(frame);
-            };
-
-            requestAnimationFrame(frame);
+            } catch (e) {
+                document.body.innerHTML = `<div style="color:red">Ошибка: ${e.message}<br>Проверьте, запущен ли сервер и верен ли путь к файлу.</div>`;
+            }
         }
-
-        init();
-
-        window.addEventListener("resize", () => {
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
+        start();
     </script>
 </body>
 </html>
