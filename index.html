@@ -1,35 +1,37 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-    <title>GSplat AR Test</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Splat Viewer</title>
+    <style>
+        body { margin: 0; background-color: #000; overflow: hidden; }
+        canvas { display: block; width: 100vw; height: 100vh; }
+        #status { position: fixed; top: 10px; left: 10px; color: white; font-family: sans-serif; z-index: 10; }
+    </style>
+</head>
+<body>
+    <div id="status">Загрузка модели...</div>
     <script type="module">
         import * as SPLAT from 'https://cdn.jsdelivr.net';
 
-        async function main() {
-            const canvas = document.createElement("canvas");
-            document.body.appendChild(canvas);
+        const canvas = document.createElement("canvas");
+        document.body.appendChild(canvas);
 
-            // Проверка поддержки WebXR
-            if ('xr' in navigator) {
-                const isSupported = await navigator.xr.isSessionSupported('immersive-ar');
-                if (!isSupported) {
-                    alert("Ваш браузер/устройство не поддерживает WebXR AR");
-                    return;
-                }
-            } else {
-                alert("WebXR не найден. Используйте Chrome на Android или HTTPS");
-                return;
+        const renderer = new SPLAT.WebGLRenderer(canvas);
+        const scene = new SPLAT.Scene();
+        const camera = new SPLAT.Camera();
+        const controls = new SPLAT.OrbitControls(camera, canvas);
+
+        async function init() {
+            try {
+                // Прямая загрузка файла
+                await SPLAT.Loader.loadAsync("model.spz", scene);
+                document.getElementById('status').innerText = "Модель загружена. Используйте мышь/тач для обзора.";
+            } catch (error) {
+                document.getElementById('status').innerText = "Ошибка: " + error.message;
+                console.error(error);
             }
-
-            const renderer = new SPLAT.WebGLRenderer(canvas);
-            const scene = new SPLAT.Scene();
-            const camera = new SPLAT.Camera();
-            const controls = new SPLAT.OrbitControls(camera, canvas);
-
-            // ЗАМЕНИТЕ НА ВАШ ФАЙЛ (убедитесь, что путь верный)
-            await SPLAT.Loader.loadAsync("model.spz", scene);
 
             const frame = () => {
                 controls.update();
@@ -37,27 +39,14 @@
                 requestAnimationFrame(frame);
             };
 
-            // Кнопка входа в AR
-            const btn = document.createElement("button");
-            btn.innerHTML = "ВОЙТИ В AR";
-            btn.style.position = "absolute";
-            btn.style.top = "20px";
-            btn.style.left = "20px";
-            btn.style.zIndex = "1000";
-            document.body.appendChild(btn);
-
-            btn.onclick = async () => {
-                const session = await navigator.xr.requestSession("immersive-ar", {
-                    requiredFeatures: ["local-floor", "hit-test"]
-                });
-                renderer.xr.setSession(session);
-            };
-
-            frame();
+            requestAnimationFrame(frame);
         }
 
-        main();
+        init();
+
+        window.addEventListener("resize", () => {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
     </script>
-</head>
-<body style="margin: 0; background: #111;"></body>
+</body>
 </html>
