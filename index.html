@@ -26,56 +26,37 @@
         // Используем конкретную версию для стабильности
         import * as SPLAT from './gsplat.js';
 
-        const loader = document.getElementById('loader');
-        const arBtn = document.getElementById('ar-btn');
-
         async function init() {
+            const canvas = document.createElement("canvas");
+            const renderer = new SPLAT.WebGLRenderer(canvas);
+            const scene = new SPLAT.Scene();
+            const camera = new SPLAT.Camera();
+            const controls = new SPLAT.OrbitControls(camera, canvas);
+    
+            document.body.appendChild(canvas);
+    
             try {
-                const canvas = document.querySelector("canvas") || document.createElement("canvas");
-                if (!canvas.parentNode) document.body.appendChild(canvas);
-
-                const renderer = new SPLAT.WebGLRenderer(canvas);
-                const scene = new SPLAT.Scene();
-                const camera = new SPLAT.Camera();
-                const controls = new SPLAT.OrbitControls(camera, canvas);
-
-                // ВАЖНО: Проверьте, что файл называется именно так!
-                const modelPath = "./model.txt"; 
-
-                console.log("Загружаю модель:", modelPath);
-                await SPLAT.Loader.loadAsync(modelPath, scene, (progress) => {
-                    loader.innerText = `Загрузка модели: ${Math.round(progress * 100)}%`;
+                // В новых версиях используется SPLAT.SplatLoader()
+                const loader = new SPLAT.SplatLoader(); 
+                
+                // Если файл переименован в .txt для GitHub, укажите "model.txt"
+                await loader.loadAsync("./model.spz", scene, (progress) => {
+                    console.log("Загрузка:", Math.round(progress * 100) + "%");
                 });
-
-                loader.style.display = "none";
-                arBtn.style.display = "block";
-
-                // Логика AR
-                arBtn.onclick = async () => {
-                    if (navigator.xr) {
-                        const session = await navigator.xr.requestSession("immersive-ar", {
-                            requiredFeatures: ["local-floor", "hit-test"]
-                        });
-                        renderer.xr.setSession(session);
-                        arBtn.style.display = "none";
-                    } else {
-                        alert("WebXR не поддерживается в этом браузере.");
-                    }
-                };
-
-                const frame = () => {
-                    controls.update();
-                    renderer.render(scene, camera);
-                    requestAnimationFrame(frame);
-                };
-                requestAnimationFrame(frame);
-
-            } catch (err) {
-                loader.innerHTML = `<span style="color:red">Ошибка: ${err.message}</span><br>Проверьте консоль (F12)`;
-                console.error("Splat Error:", err);
+    
+                console.log("Модель успешно загружена!");
+            } catch (error) {
+                console.error("Ошибка загрузки:", error);
             }
+    
+            const frame = () => {
+                controls.update();
+                renderer.render(scene, camera);
+                requestAnimationFrame(frame);
+            };
+            requestAnimationFrame(frame);
         }
-
+    
         init();
     </script>
 </body>
