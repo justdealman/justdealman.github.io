@@ -1,86 +1,61 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Three.js AR Splat</title>
+    <title>Three.js Local No-CORS</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
-        #info { position: absolute; top: 10px; width: 100%; text-align: center; color: white; z-index: 10; }
-        #ar-button { 
-            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-            padding: 12px 24px; background: white; border: none; border-radius: 25px;
-            font-weight: bold; cursor: pointer; display: none;
-        }
+        body { margin: 0; background: #000; color: white; font-family: sans-serif; }
+        #status { position: fixed; top: 10px; width: 100%; text-align: center; z-index: 10; }
     </style>
 </head>
 <body>
-    <div id="info">Загрузка модулей...</div>
-    <button id="ar-button">ЗАПУСТИТЬ AR</button>
+    <div id="status">Загрузка локальных модулей...</div>
 
-    <!-- Используем Import Map для удобного управления зависимостями -->
     <script type="importmap">
     {
         "imports": {
-            "three": "https://unpkg.com",
-            "three/addons/": "https://unpkg.com",
-            "gaussian-splat-3d": "https://unpkg.com"
+            "three": "./three.module.js",
+            "gaussian-splat-3d": "./splat.module.js"
         }
     }
     </script>
 
     <script type="module">
         import * as THREE from 'three';
-        import { ARButton } from 'three/addons/webxr/ARButton.js';
         import * as GaussianSplat3D from 'gaussian-splat-3d';
 
-        const info = document.getElementById('info');
-        let viewer;
-
         async function init() {
-            // 1. Настройка рендерера Three.js
+            const status = document.getElementById('status');
+            
             const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setPixelRatio(window.devicePixelRatio);
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.xr.enabled = true; // Важно для AR
             document.body.appendChild(renderer.domElement);
 
-            // 2. Создание вьювера Splat
-            // Настройки специально для AR (alpha: true)
-            viewer = new GaussianSplat3D.Viewer({
-                'selfRenderMode': GaussianSplat3D.RenderMode.External, // Three.js управляет рендером
+            const viewer = new GaussianSplat3D.Viewer({
                 'renderer': renderer,
+                'selfRenderMode': GaussianSplat3D.RenderMode.External,
                 'cameraUp': [0, -1, 0],
-                'initialSceneRotation': [0, 0, 0],
-                'sphericalHarmonicsDegree': 0
+                'initialSceneRotation': [0, 0, 0, 1]
             });
 
-            // 3. Загрузка файла (можешь переименовать в model.txt, если GitHub капризничает)
-            info.innerText = "Загрузка модели...";
-            
             try {
-                // Замени на свою модель
+                // Модель тоже грузим локально (переименуй в .txt если надо)
                 await viewer.addSplatScene('./model.spz', {
-                    'progressiveLoad': true
+                    'streamView': true
                 });
-                
-                info.innerText = "Модель готова! Нажми кнопку AR снизу";
-                
-                // 4. Добавляем стандартную кнопку AR от Three.js
-                document.body.appendChild(ARButton.createButton(renderer, { 
-                    requiredFeatures: ['hit-test'] 
-                }));
-
+                status.innerText = "Готово!";
+                setTimeout(() => status.style.display = 'none', 2000);
             } catch (e) {
-                info.innerText = "Ошибка: " + e.message;
-                console.error(e);
+                status.innerText = "Ошибка загрузки модели: " + e.message;
             }
 
-            // 5. Цикл анимации
-            renderer.setAnimationLoop(() => {
+            function animate() {
+                requestAnimationFrame(animate);
                 viewer.update();
                 viewer.render();
-            });
+            }
+            animate();
         }
 
         init();
