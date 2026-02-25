@@ -1,118 +1,88 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>AR 3D Gaussian Splatting</title>
+    <title>Three.js AR Splat</title>
     <style>
-        body { margin: 0; background-color: #000; overflow: hidden; font-family: sans-serif; }
-        canvas { display: block; width: 100vw; height: 100vh; }
-        #ui {
-            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-            color: white; text-align: center; z-index: 10; pointer-events: none;
-        }
-        #ar-btn {
-            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-            padding: 15px 30px; background: #ffffff; border-radius: 30px;
-            border: none; font-weight: bold; cursor: pointer; pointer-events: auto;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5); display: none;
+        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
+        #info { position: absolute; top: 10px; width: 100%; text-align: center; color: white; z-index: 10; }
+        #ar-button { 
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            padding: 12px 24px; background: white; border: none; border-radius: 25px;
+            font-weight: bold; cursor: pointer; display: none;
         }
     </style>
 </head>
 <body>
+    <div id="info">Загрузка модулей...</div>
+    <button id="ar-button">ЗАПУСТИТЬ AR</button>
 
-    <div id="ui">
-        <div id="loader">Инициализация...</div>
-    </div>
-    
-    <button id="ar-btn">СМОТРЕТЬ В AR</button>
+    <!-- Используем Import Map для удобного управления зависимостями -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com",
+            "three/addons/": "https://unpkg.com",
+            "gaussian-splat-3d": "https://unpkg.com"
+        }
+    }
+    </script>
 
     <script type="module">
-        // Импортируем локальный файл библиотеки
-        import * as SPLAT from './gsplat.js';
+        import * as THREE from 'three';
+        import { ARButton } from 'three/addons/webxr/ARButton.js';
+        import * as GaussianSplat3D from 'gaussian-splat-3d';
+
+        const info = document.getElementById('info');
+        let viewer;
 
         async function init() {
-            const loaderEl = document.getElementById('loader');
-            const arBtn = document.getElementById('ar-btn');
+            // 1. Настройка рендерера Three.js
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.xr.enabled = true; // Важно для AR
+            document.body.appendChild(renderer.domElement);
+
+            // 2. Создание вьювера Splat
+            // Настройки специально для AR (alpha: true)
+            viewer = new GaussianSplat3D.Viewer({
+                'selfRenderMode': GaussianSplat3D.RenderMode.External, // Three.js управляет рендером
+                'renderer': renderer,
+                'cameraUp': [0, -1, 0],
+                'initialSceneRotation': [0, 0, 0],
+                'sphericalHarmonicsDegree': 0
+            });
+
+            // 3. Загрузка файла (можешь переименовать в model.txt, если GitHub капризничает)
+            info.innerText = "Загрузка модели...";
             
             try {
-                // 1. Настройка рендерера и сцены
-                const canvas = document.createElement("canvas");
-                document.body.appendChild(canvas);
-
-                const renderer = new SPLAT.WebGLRenderer(canvas);
-                const scene = new SPLAT.Scene();
-                const camera = new SPLAT.Camera();
-                const controls = new SPLAT.OrbitControls(camera, canvas);
-
-                // 2. Загрузка модели (пробуем самый актуальный метод)
-                // Если GitHub не отдает .spz, замените на "model.txt"
-                const modelPath = "./model.spz"; 
-                console.log("Доступные методы в SPLAT:", Object.keys(SPLAT));
-
-                console.log("Начинаю загрузку модели...");
-                
-                // Вариант А: Прямой вызов Loader.loadAsync (классический)
-                if (SPLAT.Loader && typeof SPLAT.Loader.loadAsync === 'function') {
-                    await SPLAT.Loader.loadAsync(modelPath, scene, (p) => loaderEl.innerText = `Загрузка: ${Math.round(p * 100)}%`);
-                } 
-                // Вариант Б: Прямой вызов из корня (некоторые сборки)
-                else if (typeof SPLAT.loadAsync === 'function') {
-                    await SPLAT.loadAsync(modelPath, scene, (p) => loaderEl.innerText = `Загрузка: ${Math.round(p * 100)}%`);
-                }
-                // Вариант В: Через конструктор SplatLoader (v1.0.0+)
-                else if (SPLAT.SplatLoader) {
-                    const loader = new SPLAT.SplatLoader();
-                    await loader.loadAsync(modelPath, scene, (p) => loaderEl.innerText = `Загрузка: ${Math.round(p * 100)}%`);
-                }
-                // Вариант Г: Устаревший loadFromFileAsync
-                else {
-                    await SPLAT.Loader.loadFromFileAsync(modelPath, scene);
-                }
-
-                console.log("Победа! Модель загружена.");
-
-                loaderEl.innerText = "Модель загружена!";
-                setTimeout(() => loaderEl.style.display = "none", 2000);
-                arBtn.style.display = "block";
-
-                // 3. Логика AR (WebXR)
-                arBtn.onclick = async () => {
-                    if (navigator.xr) {
-                        try {
-                            const session = await navigator.xr.requestSession("immersive-ar", {
-                                requiredFeatures: ["local-floor", "hit-test"]
-                            });
-                            renderer.xr.setSession(session);
-                            arBtn.style.display = "none";
-                        } catch (e) {
-                            alert("Ошибка входа в AR: " + e.message);
-                        }
-                    } else {
-                        alert("Ваш браузер не поддерживает WebXR (нужен Chrome на Android + HTTPS)");
-                    }
-                };
-
-                // 4. Цикл отрисовки
-                const frame = () => {
-                    controls.update();
-                    renderer.render(scene, camera);
-                    requestAnimationFrame(frame);
-                };
-                
-                window.addEventListener("resize", () => {
-                    renderer.setSize(window.innerWidth, window.innerHeight);
+                // Замени на свою модель
+                await viewer.addSplatScene('./model.spz', {
+                    'progressiveLoad': true
                 });
+                
+                info.innerText = "Модель готова! Нажми кнопку AR снизу";
+                
+                // 4. Добавляем стандартную кнопку AR от Three.js
+                document.body.appendChild(ARButton.createButton(renderer, { 
+                    requiredFeatures: ['hit-test'] 
+                }));
 
-                requestAnimationFrame(frame);
-
-            } catch (err) {
-                console.error("Критическая ошибка:", err);
-                loaderEl.innerHTML = `<span style="color:red">Ошибка: ${err.message}</span>`;
+            } catch (e) {
+                info.innerText = "Ошибка: " + e.message;
+                console.error(e);
             }
+
+            // 5. Цикл анимации
+            renderer.setAnimationLoop(() => {
+                viewer.update();
+                viewer.render();
+            });
         }
 
-        // Запуск при загрузке страницы
         init();
     </script>
 </body>
