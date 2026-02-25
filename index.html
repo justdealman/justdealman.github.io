@@ -1,66 +1,63 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-    <title>AR GSplat.js</title>
-    <style>
-        body { margin: 0; overflow: hidden; }
-        #ar-button {
-            position: absolute; bottom: 20px; left: 50%;
-            transform: translateX(-50%); padding: 12px 24px;
-            background: #fff; border-radius: 20px; border: none;
-            font-weight: bold; z-index: 100;
-        }
-    </style>
-</head>
-<body>
-    <button id="ar-button">Запустить AR</button>
-
+    <title>GSplat AR Test</title>
     <script type="module">
         import * as SPLAT from 'https://cdn.jsdelivr.net';
-        import * as THREE from 'https://cdnjs.cloudflare.com';
 
-        let scene, camera, renderer, viewer;
+        async function main() {
+            const canvas = document.createElement("canvas");
+            document.body.appendChild(canvas);
 
-        async function init() {
-            // 1. Настройка сцены Three.js
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.xr.enabled = true; // Включаем поддержку WebXR
-            document.body.appendChild(renderer.domElement);
+            // Проверка поддержки WebXR
+            if ('xr' in navigator) {
+                const isSupported = await navigator.xr.isSessionSupported('immersive-ar');
+                if (!isSupported) {
+                    alert("Ваш браузер/устройство не поддерживает WebXR AR");
+                    return;
+                }
+            } else {
+                alert("WebXR не найден. Используйте Chrome на Android или HTTPS");
+                return;
+            }
 
-            // 2. Загрузка Splat модели (.spz или .splat)
-            const splatScene = new SPLAT.Scene();
-            const loader = new SPLAT.Loader();
-            
-            // Замените на путь к вашему файлу
-            await loader.loadAsync("model.spz", splatScene);
+            const renderer = new SPLAT.WebGLRenderer(canvas);
+            const scene = new SPLAT.Scene();
+            const camera = new SPLAT.Camera();
+            const controls = new SPLAT.OrbitControls(camera, canvas);
 
-            // Интеграция gsplat в цикл отрисовки Three.js
-            const viewer = new SPLAT.Viewer(renderer, splatScene, camera);
+            // ЗАМЕНИТЕ НА ВАШ ФАЙЛ (убедитесь, что путь верный)
+            await SPLAT.Loader.loadAsync("model.spz", scene);
 
-            // 3. Обработка кнопки AR
-            const arButton = document.getElementById('ar-button');
-            arButton.addEventListener('click', () => {
-                navigator.xr.requestSession('immersive-ar', {
-                    requiredFeatures: ['hit-test', 'local-floor']
-                }).then((session) => {
-                    renderer.xr.setSession(session);
-                    arButton.style.display = 'none';
-                });
-            });
-
-            renderer.setAnimationLoop(() => {
-                viewer.update();
+            const frame = () => {
+                controls.update();
                 renderer.render(scene, camera);
-            });
+                requestAnimationFrame(frame);
+            };
+
+            // Кнопка входа в AR
+            const btn = document.createElement("button");
+            btn.innerHTML = "ВОЙТИ В AR";
+            btn.style.position = "absolute";
+            btn.style.top = "20px";
+            btn.style.left = "20px";
+            btn.style.zIndex = "1000";
+            document.body.appendChild(btn);
+
+            btn.onclick = async () => {
+                const session = await navigator.xr.requestSession("immersive-ar", {
+                    requiredFeatures: ["local-floor", "hit-test"]
+                });
+                renderer.xr.setSession(session);
+            };
+
+            frame();
         }
 
-        init();
+        main();
     </script>
-</body>
+</head>
+<body style="margin: 0; background: #111;"></body>
 </html>
