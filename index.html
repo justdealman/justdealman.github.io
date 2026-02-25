@@ -1,32 +1,67 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <title>Splat Test</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AR GSplat GitHub</title>
     <style>
-        body { margin: 0; background: #222; color: white; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; }
-        #msg { text-align: center; }
+        body { margin: 0; background-color: #111; overflow: hidden; font-family: sans-serif; }
+        canvas { display: block; width: 100vw; height: 100vh; }
+        #loader {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: white; font-size: 1.2rem; text-align: center; z-index: 10;
+        }
+        #ar-btn {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            padding: 15px 30px; background: #fff; border-radius: 30px;
+            border: none; font-weight: bold; display: none; cursor: pointer;
+        }
     </style>
 </head>
 <body>
-    <div id="msg">Инициализация...</div>
+    <div id="loader">Загрузка библиотеки...</div>
+    <button id="ar-btn">ЗАПУСТИТЬ AR</button>
+
     <script type="module">
+        // Используем конкретную версию для стабильности
         import * as SPLAT from 'https://cdn.jsdelivr.net';
 
-        async function start() {
-            const msg = document.getElementById('msg');
+        const loader = document.getElementById('loader');
+        const arBtn = document.getElementById('ar-btn');
+
+        async function init() {
             try {
-                const canvas = document.createElement("canvas");
+                const canvas = document.querySelector("canvas") || document.createElement("canvas");
+                if (!canvas.parentNode) document.body.appendChild(canvas);
+
                 const renderer = new SPLAT.WebGLRenderer(canvas);
                 const scene = new SPLAT.Scene();
                 const camera = new SPLAT.Camera();
                 const controls = new SPLAT.OrbitControls(camera, canvas);
-                
-                document.body.innerHTML = ""; // Очищаем экран
-                document.body.appendChild(canvas);
 
-                await SPLAT.Loader.loadAsync("model.spz", scene, (p) => {
-                    msg.innerText = `Загрузка: ${Math.round(p * 100)}%`;
+                // ВАЖНО: Проверьте, что файл называется именно так!
+                const modelPath = "model.spz"; 
+
+                console.log("Загружаю модель:", modelPath);
+                await SPLAT.Loader.loadAsync(modelPath, scene, (progress) => {
+                    loader.innerText = `Загрузка модели: ${Math.round(progress * 100)}%`;
                 });
+
+                loader.style.display = "none";
+                arBtn.style.display = "block";
+
+                // Логика AR
+                arBtn.onclick = async () => {
+                    if (navigator.xr) {
+                        const session = await navigator.xr.requestSession("immersive-ar", {
+                            requiredFeatures: ["local-floor", "hit-test"]
+                        });
+                        renderer.xr.setSession(session);
+                        arBtn.style.display = "none";
+                    } else {
+                        alert("WebXR не поддерживается в этом браузере.");
+                    }
+                };
 
                 const frame = () => {
                     controls.update();
@@ -34,11 +69,14 @@
                     requestAnimationFrame(frame);
                 };
                 requestAnimationFrame(frame);
-            } catch (e) {
-                document.body.innerHTML = `<div style="color:red">Ошибка: ${e.message}<br>Проверьте, запущен ли сервер и верен ли путь к файлу.</div>`;
+
+            } catch (err) {
+                loader.innerHTML = `<span style="color:red">Ошибка: ${err.message}</span><br>Проверьте консоль (F12)`;
+                console.error("Splat Error:", err);
             }
         }
-        start();
+
+        init();
     </script>
 </body>
 </html>
