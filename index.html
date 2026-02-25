@@ -48,13 +48,29 @@
                 // 2. Загрузка модели (пробуем самый актуальный метод)
                 // Если GitHub не отдает .spz, замените на "model.txt"
                 const modelPath = "./model.spz"; 
+                console.log("Доступные методы в SPLAT:", Object.keys(SPLAT));
 
                 console.log("Начинаю загрузку модели...");
                 
-                // В версии 1.1.9+ Loader.loadAsync - статический метод
-                await SPLAT.Loader.loadAsync(modelPath, scene, (progress) => {
-                    loaderEl.innerText = `Загрузка: ${Math.round(progress * 100)}%`;
-                });
+                // Вариант А: Прямой вызов Loader.loadAsync (классический)
+                if (SPLAT.Loader && typeof SPLAT.Loader.loadAsync === 'function') {
+                    await SPLAT.Loader.loadAsync(modelPath, scene, (p) => loaderEl.innerText = `Загрузка: ${Math.round(p * 100)}%`);
+                } 
+                // Вариант Б: Прямой вызов из корня (некоторые сборки)
+                else if (typeof SPLAT.loadAsync === 'function') {
+                    await SPLAT.loadAsync(modelPath, scene, (p) => loaderEl.innerText = `Загрузка: ${Math.round(p * 100)}%`);
+                }
+                // Вариант В: Через конструктор SplatLoader (v1.0.0+)
+                else if (SPLAT.SplatLoader) {
+                    const loader = new SPLAT.SplatLoader();
+                    await loader.loadAsync(modelPath, scene, (p) => loaderEl.innerText = `Загрузка: ${Math.round(p * 100)}%`);
+                }
+                // Вариант Г: Устаревший loadFromFileAsync
+                else {
+                    await SPLAT.Loader.loadFromFileAsync(modelPath, scene);
+                }
+
+                console.log("Победа! Модель загружена.");
 
                 loaderEl.innerText = "Модель загружена!";
                 setTimeout(() => loaderEl.style.display = "none", 2000);
