@@ -40,7 +40,7 @@
                 const controls = new SPLAT.OrbitControls(camera, canvas);
 
                 // ВАЖНО: Проверьте, что файл называется именно так!
-                const modelPath = "model.spz"; 
+                const modelPath = "model.txt"; 
 
                 console.log("Загружаю модель:", modelPath);
                 await SPLAT.Loader.loadAsync(modelPath, scene, (progress) => {
