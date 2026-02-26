@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPZ Web Viewer</title>
+    <!-- Удали пробелы в ссылке ниже -->
+    <script type="module" crossorigin="anonymous" src="https://unpkg.com/@niantic/splat-viewer@latest/dist/splat-viewer.js"></script>
+    <style>
+        body { margin: 0; background: #000; }
+        splat-viewer { width: 100vw; height: 100vh; display: block; }
+    </style>
+</head>
+<body>
+
+    <!-- Вставь путь к своему файлу вместо model.spz -->
+    <splat-viewer 
+        src="./model.spz" 
+        ar-mode="true">
+    </splat-viewer>
+
+</body>
+</html>
